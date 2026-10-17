@@ -3,7 +3,7 @@ import logging
 import os
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
 from config import TELEGRAM_BOT_TOKEN, OPENROUTER_API_KEY
 from route import route_request
 from image_generator import generate_image
@@ -13,6 +13,15 @@ from aiocryptopay import AioCryptoPay, Networks
 from aiocryptopay.models.invoice import Invoice
 from dotenv import load_dotenv
 from keep_alive import keep_alive
+
+# Функция создания главного меню
+def get_main_menu():
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🤖 Выбрать ИИ-модель", callback_data="choose_ai")],
+        [InlineKeyboardButton(text="💎 Пополнить баланс (CryptoBot)", callback_data="top_up")],
+        [InlineKeyboardButton(text="🛠 Техподдержка", url="https://t.me/твой_логин_поддержки")] # Ссылка на чат с поддержкой
+    ])
+    return keyboard
 
 load_dotenv()
 CRYPTO_PAY_TOKEN = os.getenv("CRYPTO_PAY_TOKEN")
@@ -126,6 +135,58 @@ async def handle_text(message: types.Message):
             typing_task.cancel()
             await message.answer(f"❌ Произошла ошибка при обращении к модели: {e}")
 
+
+# Обработчик кнопки "Выбрать ИИ-модель"
+@dp.callback_query(F.data == "choose_ai")
+async def process_choose_ai(callback: CallbackQuery):
+    ai_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🧠 GPT-4o", callback_data="set_ai_gpt4")],
+        [InlineKeyboardButton(text="⚡ Claude 3.5 Sonnet", callback_data="set_ai_claude")],
+        [InlineKeyboardButton(text="⬅️ Назад в меню", callback_data="back_to_menu")]
+    ])
+    await callback.message.edit_text("Выбери нейросеть, с которой хочешь общаться:", reply_markup=ai_keyboard)
+    await callback.answer()
+
+# Обработчик возврата в главное меню
+@dp.callback_query(F.data == "back_to_menu")
+async def process_back_menu(callback: CallbackQuery):
+    await callback.message.edit_text("Главное меню:", reply_markup=get_main_menu())
+    await callback.answer()
+@dp.callback_query(F.data == "top_up")
+async def process_top_up(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    if not crypto:
+        await callback.message.answer("⚠️ Платежная система временно недоступна.")
+        await callback.answer()
+        return
+
+    try:
+        # Создаем инвойс через CryptoBot (например, на 5 USDT или любая другая сумма)
+        invoice = await crypto.create_invoice(
+            asset="USDT", 
+            amount=5.0, 
+            payload=str(user_id),
+            description="Пополнение баланса / Премиум-доступ"
+        )
+        
+        # Клавиатура с кнопкой оплаты и кнопкой проверки
+        pay_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="💳 Оплатить в CryptoBot", url=invoice.pay_url)],
+            [InlineKeyboardButton(text="🔄 Проверить оплату", callback_data="check_payment")],
+            [InlineKeyboardButton(text="⬅️ Назад в меню", callback_data="back_to_menu")]
+        ])
+        
+        await callback.message.edit_text(
+            "💎 **Пополнение баланса**\n\n"
+            "Нажмите кнопку ниже для оплаты счета через CryptoBot. После успешной оплаты нажмите «Проверить оплату».",
+            reply_markup=pay_keyboard,
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        await callback.message.answer(f"Ошибка создания счета: {e}")
+    
+    await callback.answer()
+    
 @dp.callback_query(F.data == "check_payment")
 async def check_payment_handler(callback: types.CallbackQuery):
     user_id = callback.from_user.id
