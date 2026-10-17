@@ -220,7 +220,7 @@ async def handle_photo(message: types.Message):
         caption = message.caption if message.caption else "Опиши подробно, что на этой картинке."
         analysis_result = await asyncio.to_thread(analyze_image_with_prompt, downloaded_file_path, caption)
 
-        await message.answer(analysis_result, parse_mode="Markdown")
+        await message.answer(analysis_result)
 
     except Exception as e:
         await message.answer(f"❌ Ошибка при анализе фото: {e}")
@@ -229,6 +229,7 @@ async def handle_photo(message: types.Message):
         if downloaded_file_path and os.path.exists(downloaded_file_path):
             os.remove(downloaded_file_path)
         typing_task.cancel()
+
 async def main():
     
     keep_alive()
