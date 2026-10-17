@@ -17,7 +17,7 @@ load_dotenv()
 CRYPTO_PAY_TOKEN = os.getenv("CRYPTO_PAY_TOKEN")
 
 # Инициализация CryptoBot
-crypto = AioCryptoPay(token=CRYPTO_PAY_TOKEN) if CRYPTO_PAY_TOKEN else None
+crypto = None
 
 logging.basicConfig(level=logging.INFO)
 
@@ -166,6 +166,10 @@ async def handle_photo(message: types.Message):
         await message.answer(f"❌ Ошибка при анализе фото: {e}")
 
 async def main():
+    global crypto
+    if CRYPTO_PAY_TOKEN:
+        crypto = AioCryptoPay(token=CRYPTO_PAY_TOKEN)
+
     print("🚀 Telegram-бот запущен и работает стабильно!")
     await dp.start_polling(bot)
 
