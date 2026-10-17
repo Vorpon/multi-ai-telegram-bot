@@ -17,7 +17,7 @@ load_dotenv()
 CRYPTO_PAY_TOKEN = os.getenv("CRYPTO_PAY_TOKEN")
 
 # Инициализация CryptoBot
-crypto = AioCryptoPay(token=CRYPTO_PAY_TOKEN, net=Networks.MAIN_NET) if CRYPTO_PAY_TOKEN else None
+crypto = AioCryptoPay(token=CRYPTO_PAY_TOKEN) if CRYPTO_PAY_TOKEN else None
 
 logging.basicConfig(level=logging.INFO)
 
