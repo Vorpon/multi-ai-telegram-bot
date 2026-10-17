@@ -12,6 +12,7 @@ from openai import OpenAI
 from aiocryptopay import AioCryptoPay, Networks
 from aiocryptopay.models.invoice import Invoice
 from dotenv import load_dotenv
+from keep_alive import keep_alive
 
 load_dotenv()
 CRYPTO_PAY_TOKEN = os.getenv("CRYPTO_PAY_TOKEN")
@@ -166,6 +167,9 @@ async def handle_photo(message: types.Message):
         await message.answer(f"❌ Ошибка при анализе фото: {e}")
 
 async def main():
+    
+    keep_alive()
+    # Запускаем фоновый HTTP-сервер для Render
     global crypto
     if CRYPTO_PAY_TOKEN:
         crypto = AioCryptoPay(token=CRYPTO_PAY_TOKEN)
