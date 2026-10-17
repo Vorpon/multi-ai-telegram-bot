@@ -186,7 +186,7 @@ async def process_top_up(callback: CallbackQuery):
         await callback.message.answer(f"Ошибка создания счета: {e}")
     
     await callback.answer()
-    
+
 @dp.callback_query(F.data == "check_payment")
 async def check_payment_handler(callback: types.CallbackQuery):
     user_id = callback.from_user.id
@@ -209,24 +209,26 @@ async def check_payment_handler(callback: types.CallbackQuery):
 @dp.message(F.photo)
 async def handle_photo(message: types.Message):
     typing_task = asyncio.create_task(send_typing_action(bot, message.chat.id))
+    downloaded_file_path = None
     try:
         photo = message.photo[-1]
-        file_info = await bot.get_file(photo.file_id)
         downloaded_file_path = f"temp_{photo.file_id}.jpg"
-        await bot.download(file_info.file_path, destination=downloaded_file_path)
         
+        # Скачиваем файл с серверов Telegram
+        await bot.download(photo, destination=downloaded_file_path)
+
         caption = message.caption if message.caption else "Опиши подробно, что на этой картинке."
         analysis_result = await asyncio.to_thread(analyze_image_with_prompt, downloaded_file_path, caption)
-        
-        if os.path.exists(downloaded_file_path):
-            os.remove(downloaded_file_path)
-            
-        typing_task.cancel()
-        await message.answer(analysis_result, parse_mode="Markdown")
-    except Exception as e:
-        typing_task.cancel()
-        await message.answer(f"❌ Ошибка при анализе фото: {e}")
 
+        await message.answer(analysis_result, parse_mode="Markdown")
+
+    except Exception as e:
+        await message.answer(f"❌ Ошибка при анализе фото: {e}")
+        
+    finally:
+        if downloaded_file_path and os.path.exists(downloaded_file_path):
+            os.remove(downloaded_file_path)
+        typing_task.cancel()
 async def main():
     
     keep_alive()
