@@ -231,15 +231,24 @@ async def handle_photo(message: types.Message):
         typing_task.cancel()
 
 async def main():
-    
+    # Запускаем фоновый HTTP-сервер для Render, чтобы он поддерживал порт
     keep_alive()
-    # Запускаем фоновый HTTP-сервер для Render
+    
     global crypto
     if CRYPTO_PAY_TOKEN:
         crypto = AioCryptoPay(token=CRYPTO_PAY_TOKEN)
-
+    
     print("🚀 Telegram-бот запущен и работает стабильно!")
-    await dp.start_polling(bot)
+    
+    # Бесконечный цикл с автопереподключением при обрывах связи
+    while True:
+        try:
+            # Удаляем вебхуки на всякий случай перед стартом поллинга
+            await bot.delete_webhook(drop_pending_updates=True)
+            await dp.start_polling(bot)
+        except Exception as e:
+            print(f"⚠️ Ошибка соединения: {e}. Переподключение через 5 секунд...")
+            await asyncio.sleep(5)
 
 if __name__ == "__main__":
     asyncio.run(main())
